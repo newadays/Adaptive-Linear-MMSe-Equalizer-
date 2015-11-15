@@ -1,0 +1,111 @@
+%%MMSE
+
+close all; clear all; clc;
+% Parameter settings
+sym = zeros(4000,1);
+wt = zeros(32,1);
+step_size = 0.345;
+
+% QPSK passband
+%     for k=1:4000
+%         m = randi(4)-1;
+%         angle1 = round(cos(m/2*pi));
+%         angle2 = round(sin(m/2*pi));
+%         a = sqrt(2)* angle1;
+%         b = (sqrt(2) * angle2)*1i;
+%         sym(k) =  a+b;
+%     end
+
+% QPSK baseband
+no_sym = 4000;     %no of symbols
+ns=1;              %no of samples per symbol
+m = 2;             %no of orthogonal basis
+M=4;               %no of symbols
+
+rsym = randi([0 3],no_sym,1);                 %random symbol
+sym = pskmod(rsym,4,pi/4);                    %QPSK modulation
+real_sym = sign(real(sym));
+imag_sym = sign(imag(sym));
+sym = real_sym + imag_sym * j;
+figure
+plot(real_sym,imag_sym,'o','MarkerEdgeColor','b','MarkerFaceColor','b')
+title('ak - Transmitted symbols');
+pause(2)
+close all;
+
+% channel
+c = [0.407+0.407i,0.815+0.815i,0.407+0.407i];    %actual channel
+c_test = [0+0i,1+1i,0+0i];                       %test channel
+delay = 2;
+for i=1:4000 - delay
+    h_cal = c * sym(i:i+2);
+    h_cal_test = c_test * sym(i:i+2);
+    %      h_cal_test_k = conv(c_test,sym);
+    h(i) = h_cal;
+    h_test(i) = h_cal_test;
+end
+% noise
+snr_bit = 20;
+snr = log2(4) * snr_bit;
+y = awgn(h,snr);
+y_test = awgn(h_test,snr);
+figure
+subplot(2,2,1)
+plot (h,'o','MarkerEdgeColor','b','MarkerFaceColor','b')
+title(' hk - transmitted system convoled with the channel');
+subplot(2,2,2)
+plot (h_test,'o','MarkerEdgeColor','b','MarkerFaceColor','b')
+title(' hk - transmitted system convoled with the test channel');
+subplot(2,2,3)
+plot (y,'o','MarkerEdgeColor','b','MarkerFaceColor','b');
+title(' yk - convoled with the noise');
+subplot(2,2,4)
+plot (y_test,'o','MarkerEdgeColor','b','MarkerFaceColor','b');
+title(' yk - convoled with the noise - test channel');
+pause(0.5)
+close all;
+% adaptive equalization - Linear MMSe
+step_size=0.005;
+taps = 32;
+% for j=1:5
+for i=1:4000-taps-delay
+    y_cal = y(i:i+31);                      %actual channel
+%     y_cal = y_test(i:i+31);                 %test channel
+    y_flip = y_cal(length(y_cal):-1:1);
+    z_cal= y_flip*conj(wt);
+    e_cal = sym(i+16)- z_cal ;
+    mse(i) = abs(e_cal);
+    z(i) = z_cal;
+    %     Decision
+    d(i) = sign(real(z_cal)) + sign(imag(z_cal)) * j;
+    wt_cal = wt + step_size * conj(e_cal) * y_flip.'; %Matlab will invert & use conjugate with y_flip'without .
+    wt =wt_cal;
+    wt_stored(:,i) = wt;
+    
+    if i > 100
+        number = 0;
+        for k=0:99
+            if d(i + k -100) ~= sym(i + k +16 -100)
+                number = number + 1;
+            end
+            ber(i-100) = number / 100;
+        end
+    end
+end
+figure
+subplot (2,2,1)
+area(mse);
+title('mse - Mean Square error');
+ylabel('Output MSE - Adaptive Linear MMSe')
+subplot (2,2,2)
+plot(ber);
+title('BER - Bit Error Rate');
+ylabel('Ber')
+subplot (2,2,3)
+plot (abs(wt_stored(18,:)),'c');hold on;
+plot (abs(wt_stored(17,:)),'b');hold on;
+plot (abs(wt_stored(16,:)),'g')
+title('weights increament');
+subplot(2,2,4)
+plot (z,'o','MarkerEdgeColor','b','MarkerFaceColor','b');
+title(' zk - after training');
