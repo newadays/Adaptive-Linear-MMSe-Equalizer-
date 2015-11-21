@@ -1,6 +1,6 @@
 # Adaptive-Linear-MMSe-Equalizer-
 Adaptive Linear Minimal Mean Square Error Equalizer(MMSe) for communication channels
-Copyright (c) 2015, 'Gbenga Awodokun All rights reserved. I am currently writing all these codes in Java. If prefer java, it would be availble soon.
+Copyright (c) 2015, 'Gbenga Awodokun All rights reserved. Currently re-writing all these codes in Java. If you prefer java, it would be available soon.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
